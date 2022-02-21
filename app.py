@@ -29,7 +29,7 @@ class FileCreatedEventHandler(FileSystemEventHandler):
             return
 
         source_path = Path(event.src_path)
-        default_target_path = Path(self.configs.get("target")).resolve()
+        target_path = Path(self.configs.get("target")).resolve()
 
         suffix = self.configs.get("suffix")
         if suffix is not None and suffix.get("exclude") is None:
@@ -45,19 +45,18 @@ class FileCreatedEventHandler(FileSystemEventHandler):
             if not rule.get("keyword") in source_path.name:
                 continue
 
-            if rule.get("target"):
-                target_path = Path(rule.get("target")).resolve()
-            else:
-                target_path = default_target_path
+            rule_target_path = target_path
+            if rule.get("folder"):
+                rule_target_path = target_path.joinpath(rule.get("folder")).resolve()
 
             if target_path.is_file():
-                self.logger.warning("Target path is a file: %s", target_path)
+                self.logger.warning("Target path is a file: %s", rule_target_path)
                 continue
 
             try:
-                Path(target_path).mkdir(parents=True, exist_ok=True)
-                shutil.move(event.src_path, target_path)
-                self.logger.info("File moved: %s -> %s", event.src_path, target_path)
+                Path(rule_target_path).mkdir(parents=True, exist_ok=True)
+                shutil.move(event.src_path, rule_target_path)
+                self.logger.info("File moved: %s -> %s", event.src_path, rule_target_path)
             except Exception as e:
                 self.logger.error(e)
 
