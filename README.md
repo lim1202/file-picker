@@ -1,5 +1,7 @@
 # file-picker
 
+[![Docker Image CI](https://github.com/lim1202/file-picker/actions/workflows/docker-image.yml/badge.svg)](https://github.com/lim1202/file-picker/actions/workflows/docker-image.yml)
+
 # Introduction
 
 Move new files by rules.
