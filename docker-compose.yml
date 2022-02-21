@@ -1,0 +1,10 @@
+version: '3'
+
+services:
+  file-picker:
+    image: lim1202/file-picker:latest
+    volumes:
+      - /PATH-TO-CONFIG/config.yaml:/app/config.yaml
+      - /PATH-TO-SOURCE/:/source
+      - /PATH-TO-TARGET/:/target
+    restart: always

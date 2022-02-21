@@ -1,0 +1,15 @@
+---
+# source path
+source: ./source
+
+# target path (default)
+target: ./target
+
+suffix: 
+  excludes: 
+    - .torrent
+
+# rules for moving new files
+rules:
+  - keyword: 'example'
+    target: './target/test'
