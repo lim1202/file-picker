@@ -90,6 +90,13 @@ if __name__ == "__main__":
     observer = Observer()
     observer.schedule(event_handler, source_path, recursive=False)
     observer.start()
+
+    if configs.get("rules"):
+        rules = configs.get("rules")
+        logging.info("Matching %d rules", len(rules))
+        for rule in configs.get("rules"):
+            logging.info("Keyword: '%s' -> Folder: '%s'", rule.get("keyword"), rule.get("folder"))
+
     logging.info("Watching: %s", source_path)
 
     try:
