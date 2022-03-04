@@ -56,7 +56,9 @@ class FileCreatedEventHandler(FileSystemEventHandler):
             try:
                 Path(rule_target_path).mkdir(parents=True, exist_ok=True)
                 shutil.move(event.src_path, rule_target_path)
-                self.logger.info("File moved: %s -> %s", event.src_path, rule_target_path)
+                self.logger.info(
+                    "File moved: %s -> %s", event.src_path, rule_target_path
+                )
             except Exception as e:
                 self.logger.error(e)
 
@@ -86,18 +88,20 @@ if __name__ == "__main__":
     source_path = Path(configs.get("source")).resolve()
     source_path.mkdir(parents=True, exist_ok=True)
 
+    if configs.get("rules"):
+        rules = configs.get("rules")
+        logging.info("Matching %d rules", len(rules))
+        for rule in configs.get("rules"):
+            logging.info(
+                "Keyword: '%s' -> Folder: '%s'", rule.get("keyword"), rule.get("folder")
+            )
+
     event_handler = FileCreatedEventHandler(configs=configs)
     observer = Observer()
     observer.schedule(event_handler, source_path, recursive=False)
     observer.start()
 
-    if configs.get("rules"):
-        rules = configs.get("rules")
-        logging.info("Matching %d rules", len(rules))
-        for rule in configs.get("rules"):
-            logging.info("Keyword: '%s' -> Folder: '%s'", rule.get("keyword"), rule.get("folder"))
-
-    logging.info("Watching: %s", source_path)
+    logging.info("Start watching: %s -> %s", source_path, configs.get("target"))
 
     try:
         while observer.is_alive():
