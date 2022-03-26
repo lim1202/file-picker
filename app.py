@@ -14,6 +14,11 @@ class FileCreatedEventHandler(FileSystemEventHandler):
         super().__init__()
 
         self.logger = logger or logging.root
+
+        if configs is None:
+            self.logging.error("Configs is required.")
+            exit(1)
+
         self.configs = configs
 
     def on_created(self, event):
@@ -25,16 +30,21 @@ class FileCreatedEventHandler(FileSystemEventHandler):
         if event.is_directory:
             return
 
-        if self.configs is None:
-            return
-
         source_path = Path(event.src_path)
         target_path = Path(self.configs.get("target")).resolve()
 
         suffix = self.configs.get("suffix")
-        if suffix is not None and suffix.get("exclude") is None:
-            for exclude in suffix.get("excludes"):
-                if source_path.suffix.casefold() == str(exclude).casefold():
+        if suffix:
+            if suffix.get("excludes"):
+                for exclude in suffix.get("excludes"):
+                    if source_path.suffix.casefold() == str(exclude).casefold():
+                        return
+            if suffix.get("includes"):
+                included = False
+                for include in suffix.get("includes"):
+                    if source_path.suffix.casefold() == str(include).casefold():
+                        included = True
+                if included:
                     return
 
         rules = self.configs.get("rules")
@@ -98,7 +108,7 @@ if __name__ == "__main__":
 
     event_handler = FileCreatedEventHandler(configs=configs)
     observer = Observer()
-    observer.schedule(event_handler, source_path, recursive=False)
+    observer.schedule(event_handler, source_path)
     observer.start()
 
     logging.info("Start watching: %s -> %s", source_path, configs.get("target"))

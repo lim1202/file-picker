@@ -8,6 +8,9 @@ target: ./target
 suffix: 
   excludes: 
     - .torrent
+  includes:
+    - .mp4
+    - .mkv
 
 # rules for moving new files
 rules:
