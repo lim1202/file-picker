@@ -14,12 +14,32 @@ class FileCreatedEventHandler(FileSystemEventHandler):
         super().__init__()
 
         self.logger = logger or logging.root
+        self.configs = configs
 
-        if configs is None:
-            self.logging.error("Configs is required.")
+        if (
+            self.configs is None
+            or self.configs.get("source") is None
+            or self.configs.get("target") is None
+            or self.configs.get("rules") is None
+        ):
+            self.logger.error("Invalid config file")
             exit(1)
 
-        self.configs = configs
+        suffix = self.configs.get("suffix")
+        if suffix:
+            if suffix.get("excludes"):
+                self.logger.info("Exclude suffix: %s", suffix.get("excludes"))
+            if suffix.get("includes"):
+                self.logger.info("Include suffix: %s", suffix.get("includes"))
+
+        rules = self.configs.get("rules")
+        self.logger.info("Matching %d rules:", len(rules))
+        for rule in self.configs.get("rules"):
+            self.logger.info(
+                "- Keyword: '%s' -> Folder: '%s'",
+                rule.get("keyword"),
+                rule.get("folder"),
+            )
 
     def on_created(self, event):
         super().on_created(event)
@@ -31,7 +51,6 @@ class FileCreatedEventHandler(FileSystemEventHandler):
             return
 
         source_path = Path(event.src_path)
-        target_path = Path(self.configs.get("target")).resolve()
 
         suffix = self.configs.get("suffix")
         if suffix:
@@ -46,6 +65,8 @@ class FileCreatedEventHandler(FileSystemEventHandler):
                         included = True
                 if included:
                     return
+
+        target_path = Path(self.configs.get("target")).resolve()
 
         rules = self.configs.get("rules")
         for rule in rules:
@@ -86,32 +107,20 @@ if __name__ == "__main__":
     stream = open(config_file, "r")
     configs = yaml.load(stream, Loader=yaml.FullLoader)
 
-    if (
-        configs is None
-        or configs.get("source") is None
-        or configs.get("target") is None
-        or configs.get("rules") is None
-    ):
-        logging.error("Invalid config file")
-        exit(1)
+    logging.info("Configuration file loaded: %s", config_file)
+
+    event_handler = FileCreatedEventHandler(configs=configs)
 
     source_path = Path(configs.get("source")).resolve()
     source_path.mkdir(parents=True, exist_ok=True)
+    target_path = Path(configs.get("target")).resolve()
+    target_path.mkdir(parents=True, exist_ok=True)
 
-    if configs.get("rules"):
-        rules = configs.get("rules")
-        logging.info("Matching %d rules", len(rules))
-        for rule in configs.get("rules"):
-            logging.info(
-                "Keyword: '%s' -> Folder: '%s'", rule.get("keyword"), rule.get("folder")
-            )
-
-    event_handler = FileCreatedEventHandler(configs=configs)
     observer = Observer()
     observer.schedule(event_handler, source_path)
     observer.start()
 
-    logging.info("Start watching: %s -> %s", source_path, configs.get("target"))
+    logging.info("Start watching: %s -> %s", source_path, target_path)
 
     try:
         while observer.is_alive():
