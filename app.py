@@ -63,7 +63,7 @@ class FileCreatedEventHandler(FileSystemEventHandler):
                 for include in suffix.get("includes"):
                     if source_path.suffix.casefold() == str(include).casefold():
                         included = True
-                if included:
+                if not included:
                     return
 
         target_path = Path(self.configs.get("target")).resolve()
