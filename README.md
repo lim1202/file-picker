@@ -1,10 +1,10 @@
-# file-picker
+# filing
 
 [![Docker Image CI](https://github.com/lim1202/file-picker/actions/workflows/docker-image.yml/badge.svg)](https://github.com/lim1202/file-picker/actions/workflows/docker-image.yml)
 
 # Introduction
 
-Move new files by rules.
+Archive new files from source path to target path by rules.
 
 # How to use
 
@@ -19,8 +19,8 @@ Move new files by rules.
 ```sh
 docker run -d  \
 -v /PATH-TO-CONFIG/config.yaml:/app/config.yaml \
--v /PATH-TO-SOURCE/:/source \
--v /PATH-TO-TARGET/:/target \
+-v /PATH-TO-SOURCE/:/app/source \
+-v /PATH-TO-TARGET/:/app/target \
 --restart=always \
 lim1202/file-picker:latest
 ```
