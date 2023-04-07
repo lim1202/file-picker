@@ -4,7 +4,7 @@ services:
   filing:
     image: lim1202/filing:latest
     volumes:
-      - /PATH-TO-CONFIG/config.yaml:/app/config.yaml
+      - /PATH-TO-CONFIG/:/app/config
       - /PATH-TO-SOURCE/:/app/source
       - /PATH-TO-TARGET/:/app/target
     restart: always

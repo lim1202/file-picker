@@ -10,4 +10,4 @@ RUN pip install --no-cache-dir -i https://mirrors.aliyun.com/pypi/simple --trust
 
 COPY . /app
 
-CMD [ "python", "-u", "app.py" ]
+ENTRYPOINT [ "python", "-u", "app.py" ]

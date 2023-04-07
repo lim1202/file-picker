@@ -1,5 +1,6 @@
 from ast import Try
 import logging
+import os
 import shutil
 import time
 import yaml
@@ -11,11 +12,11 @@ from watchdog.observers import Observer
 class ConfigHandler(FileSystemEventHandler):
     """Reload observer after config file modified."""
 
-    def __init__(self, observer, filename: str = "config.yaml"):
+    def __init__(self, observer, filename: str):
         super().__init__()
 
         self.logger = logging.getLogger(__name__)
-        self.app_path = Path(__file__).parent.resolve()
+        self.app_path = Path(__file__).parent.joinpath("config").resolve()
 
         self.observer = observer
         self.filename = filename
@@ -169,8 +170,10 @@ if __name__ == "__main__":
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
+    config_filename = os.getenv("CONFIG_FILE", "config.yaml")
+
     observer = Observer()
-    config_handler = ConfigHandler(observer)
+    config_handler = ConfigHandler(observer, filename=config_filename)
     config_handler.start_observer()
 
     try:
