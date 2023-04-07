@@ -1,40 +1,107 @@
 from ast import Try
 import logging
 import shutil
+import time
 import yaml
 from pathlib import Path
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
 
-class FileCreatedEventHandler(FileSystemEventHandler):
-    """Move new files by rules."""
+class ConfigHandler(FileSystemEventHandler):
+    """Reload observer after config file modified."""
 
-    def __init__(self, logger=None, configs=None):
+    def __init__(self, observer, filename: str = "config.yaml"):
         super().__init__()
 
-        self.logger = logger or logging.root
-        self.configs = configs
+        self.logger = logging.getLogger(__name__)
+        self.app_path = Path(__file__).parent.resolve()
+
+        self.observer = observer
+        self.filename = filename
+        self.load_config()
+
+    def on_modified(self, event):
+        if event.src_path.endswith(self.filename):
+            self.logger.info("Config file modified, reloading configs...")
+            # Reload configuration
+            self.load_config()
+            self.reload_observer()
+
+    def load_config(self):
+        config_file = self.app_path.joinpath(self.filename)
+        stream = open(config_file, "r")
+        configs = yaml.load(stream, Loader=yaml.FullLoader)
 
         if (
-            self.configs is None
-            or self.configs.get("source") is None
-            or self.configs.get("target") is None
-            or self.configs.get("rules") is None
+            configs is None
+            or configs.get("source") is None
+            or configs.get("target") is None
+            or configs.get("rules") is None
         ):
             self.logger.error("Invalid config file")
             exit(1)
 
-        suffix = self.configs.get("suffix")
+        self.configs = configs
+        self.logger.info("Config file loaded: %s", config_file)
+
+    def start_observer(self):
+        source_path = Path(self.configs.get("source")).resolve()
+        source_path.mkdir(parents=True, exist_ok=True)
+        target_path = Path(self.configs.get("target")).resolve()
+        target_path.mkdir(parents=True, exist_ok=True)
+
+        event_handler = FileCreatedEventHandler(configs=self.configs)
+
+        self.observer.schedule(self, self.app_path)
+        self.observer.schedule(event_handler, source_path)
+        self.observer.start()
+        logging.info("Observer start watching: %s -> %s", source_path, target_path)
+
+    def reload_observer(self):
+        self.observer.unschedule_all()
+
+        source_path = Path(self.configs.get("source")).resolve()
+        target_path = Path(self.configs.get("target")).resolve()
+
+        event_handler = FileCreatedEventHandler(configs=self.configs)
+
+        self.observer.schedule(self, self.app_path)
+        self.observer.schedule(event_handler, source_path)
+        logging.info("Observer reloaded, watching: %s -> %s", source_path, target_path)
+
+
+class FileCreatedEventHandler(FileSystemEventHandler):
+    """Move new files by rules."""
+
+    def __init__(self, configs: dict):
+        super().__init__()
+
+        self.logger = logging.getLogger(__name__)
+
+        if (
+            configs is None
+            or configs.get("source") is None
+            or configs.get("target") is None
+            or configs.get("rules") is None
+        ):
+            self.logger.error("Invalid config file")
+            exit(1)
+
+        self.configs = configs
+        self.source = self.configs.get("source") or "source"
+        self.target = self.configs.get("target") or "target"
+        self.rules = rules = self.configs.get("rules") or []
+        self.suffix = suffix = self.configs.get("suffix")
+
         if suffix:
             if suffix.get("excludes"):
                 self.logger.info("Exclude suffix: %s", suffix.get("excludes"))
             if suffix.get("includes"):
                 self.logger.info("Include suffix: %s", suffix.get("includes"))
 
-        rules = self.configs.get("rules")
         self.logger.info("Matching %d rules:", len(rules))
-        for rule in self.configs.get("rules"):
+        for rule in rules:
             self.logger.info(
                 "- Keyword: '%s' -> Folder: '%s'",
                 rule.get("keyword"),
@@ -52,7 +119,7 @@ class FileCreatedEventHandler(FileSystemEventHandler):
 
         source_path = Path(event.src_path)
 
-        suffix = self.configs.get("suffix")
+        suffix = self.suffix
         if suffix:
             if suffix.get("excludes"):
                 for exclude in suffix.get("excludes"):
@@ -66,10 +133,9 @@ class FileCreatedEventHandler(FileSystemEventHandler):
                 if not included:
                     return
 
-        target_path = Path(self.configs.get("target")).resolve()
+        target_path = Path(self.target).resolve()
 
-        rules = self.configs.get("rules")
-        for rule in rules:
+        for rule in self.rules:
             if rule.get("keyword") is None:
                 continue
 
@@ -103,28 +169,14 @@ if __name__ == "__main__":
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-    config_file = Path(__file__).parent.joinpath("config.yaml")
-    stream = open(config_file, "r")
-    configs = yaml.load(stream, Loader=yaml.FullLoader)
-
-    logging.info("Configuration file loaded: %s", config_file)
-
-    event_handler = FileCreatedEventHandler(configs=configs)
-
-    source_path = Path(configs.get("source")).resolve()
-    source_path.mkdir(parents=True, exist_ok=True)
-    target_path = Path(configs.get("target")).resolve()
-    target_path.mkdir(parents=True, exist_ok=True)
-
     observer = Observer()
-    observer.schedule(event_handler, source_path)
-    observer.start()
-
-    logging.info("Start watching: %s -> %s", source_path, target_path)
+    config_handler = ConfigHandler(observer)
+    config_handler.start_observer()
 
     try:
-        while observer.is_alive():
-            observer.join(1)
-    finally:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
         observer.stop()
+    finally:
         observer.join()

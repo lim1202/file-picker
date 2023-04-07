@@ -11,8 +11,9 @@ suffix:
   includes:
     - .mp4
     - .mkv
+    - .avi
 
 # rules for moving new files
 rules:
   - keyword: 'example'
-    folder: 'test'
+    folder: 'example/season 1'
